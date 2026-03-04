@@ -3,73 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مشغل فيديو احترافي</title>
+    <title>مشغل فيديو HLS & M3U8</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #1a1a1a; margin: 0; }
-        .container { width: 90%; max-width: 800px; text-align: center; color: white; }
-        video { width: 100%; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .controls { margin-top: 20px; background: #333; padding: 15px; border-radius: 8px; }
-        input { width: 80%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: none; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        body { font-family: sans-serif; background-color: #121212; color: white; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .container { width: 100%; max-width: 700px; text-align: center; }
+        video { width: 100%; border-radius: 10px; background: black; margin-bottom: 20px; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        input[type="text"] { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #2c2c2c; color: white; box-sizing: border-box; }
+        .file-input { margin: 15px 0; text-align: right; }
+        button { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        button:active { background: #219150; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>مشغل الفيديو الخاص بك</h2>
-    
-    <video id="myVideo" controls>
-        تصفحك لا يدعم مشغل الفيديو.
-    </video>
+    <div class="card">
+        <h2>مشغل الفيديو الذكي</h2>
+        
+        <video id="video" controls crossorigin="anonymous"></video>
 
-    <div class="controls">
-        <label>رابط الفيديو (MP4):</label>
-        <input type="text" id="videoUrl" placeholder="ضع رابط الفيديو هنا...">
-        
-        <label>ملف الترجمة (SRT أو VTT):</label>
-        <input type="file" id="subtitleFile" accept=".vtt,.srt">
-        
-        <button onclick="loadContent()" style="padding: 10px 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px;">تشغيل</button>
+        <div class="file-input">
+            <label>رابط الفيديو (m3u8 أو mp4):</label>
+            <input type="text" id="videoSource" value="https://limit.fatherlessdad.workers.dev/skyember44.online/file2/~T0EJ5xrqcsmZb5kRxfcXWAMIl8T8tDmE387yaxQUnabmq8wCxHh6NYCAzS0b43IbJyYQa~Fx1pHNsZsTKKVLvu+oibbuRDWi8RctyAo5SW91XIlfpMSPfn4agudyg4MsiRhGmVpCI3GumUtGR72pQgLuwNI8GdW10sFHYrc0F4=/NzIw/aW5kZXgubTN1OA==.m3u8">
+        </div>
+
+        <div class="file-input">
+            <label>اختر ملف الترجمة من الهاتف:</label>
+            <input type="file" id="subFile" accept=".vtt,.srt">
+        </div>
+
+        <button onclick="startPlayer()">تشغيل الفيديو الآن</button>
     </div>
 </div>
 
 <script>
-    function loadContent() {
-        const video = document.getElementById('myVideo');
-        const videoUrl = document.getElementById('videoUrl').value;
-        const subtitleInput = document.getElementById('subtitleFile');
+    function startPlayer() {
+        const video = document.getElementById('video');
+        const source = document.getElementById('videoSource').value;
+        const subInput = document.getElementById('subFile');
 
-        if (videoUrl) {
-            // تحديث رابط الفيديو
-            video.src = videoUrl;
+        // 1. تشغيل الفيديو (دعم m3u8)
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(source);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                video.play();
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // لدعم متصفح Safari على الآيفون
+            video.src = source;
+            video.addEventListener('loadedmetadata', function() {
+                video.play();
+            });
         }
 
-        if (subtitleInput.files.length > 0) {
-            // إزالة أي ترجمة قديمة
-            const oldTrack = video.querySelector('track');
-            if (oldTrack) video.removeChild(oldTrack);
-
-            // إنشاء مسار ترجمة جديد من الملف المرفوع من الهاتف
-            const file = subtitleInput.files[0];
+        // 2. إضافة الترجمة من ملف
+        if (subInput.files.length > 0) {
+            const file = subInput.files[0];
             const reader = new FileReader();
-
+            
             reader.onload = function(e) {
+                // مسح التراكات القديمة إن وجدت
+                while (video.firstChild) { video.removeChild(video.firstChild); }
+                
                 const track = document.createElement('track');
                 track.kind = 'subtitles';
                 track.label = 'العربية';
                 track.srclang = 'ar';
-                track.src = URL.createObjectURL(file);
+                track.src = URL.createObjectURL(new Blob([e.target.result], {type: 'text/vtt'}));
                 track.default = true;
                 video.appendChild(track);
-                
-                // إعادة تحميل الفيديو لتفعيل التغييرات
-                video.load();
-                video.play();
             };
             reader.readAsText(file);
-        } else {
-            video.load();
-            video.play();
         }
     }
 </script>
