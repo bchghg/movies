@@ -2,85 +2,407 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مشغل فيديو HLS & M3U8</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>دورتي 📺</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    
     <style>
-        body { font-family: sans-serif; background-color: #121212; color: white; display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .container { width: 100%; max-width: 700px; text-align: center; }
-        video { width: 100%; border-radius: 10px; background: black; margin-bottom: 20px; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        input[type="text"] { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #2c2c2c; color: white; box-sizing: border-box; }
-        .file-input { margin: 15px 0; text-align: right; }
-        button { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        button:active { background: #219150; }
+        /* إعدادات الصفحة الأساسية */
+        html, body { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background-color: #000000; color: #eee;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch; 
+        }
+
+        body {
+            display: flex; flex-direction: column;
+            align-items: center;
+        }
+
+        /* تثبيت المشغل في الأعلى */
+        .card { 
+            position: -webkit-sticky; 
+            position: sticky; 
+            top: 0; 
+            z-index: 1000; 
+            background: #000; 
+            width: 100%; 
+            max-width: 800px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+        }
+        
+        video { 
+            width: 100%; 
+            display: block; 
+            aspect-ratio: 16/9; 
+            background: #000; 
+            outline: none; 
+        }
+
+        /* تنسيق الترجمة الافتراضي */
+        video::cue {
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            font-size: 18px;
+        }
+
+        #contentWrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #admin { display: none; width: 95%; max-width: 650px; margin-top: 15px; }
+        
+        #viewerCount {
+            background: #0a0a0a; color: #4caf50; padding: 8px;
+            border-radius: 8px; text-align: center; font-size: 14px;
+            margin-bottom: 10px; border: 1px solid #1a1a1a;
+        }
+
+        input, select { 
+            width: 100%; padding: 12px; margin: 6px 0; 
+            border: 1px solid #222; border-radius: 8px; 
+            font-size: 14px; background: #0a0a0a; color: #fff;
+            box-sizing: border-box; outline: none;
+        }
+
+        .btn-group { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+
+        button { 
+            flex: 1; min-width: 100px; padding: 12px; background-color: #111; 
+            color: #fff; border: 1px solid #222; border-radius: 8px; 
+            cursor: pointer; font-size: 14px; font-weight: bold;
+        }
+
+        .btn-sync.active { background-color: #1b5e20; border-color: #2e7d32; }
+        .btn-sync.inactive { background-color: #b71c1c; border-color: #c62828; }
+        .btn-delete { color: #ff5252; border-color: #5d1b1b; }
+        .btn-sub { background-color: #4527a0; border-color: #5e35b1; color: white; }
+
+        #statusText { text-align: center; font-size: 13px; color: #4caf50; margin: 10px 0; font-weight: bold; }
+        
+        h2, p, span:not(.ep-name-text), h3 { display: none !important; }
+
+        #librarySection {
+            width: 95%; max-width: 700px; 
+            margin: 20px auto 120px auto; 
+            display: none;
+        }
+        
+        .lib-title { display: none; }
+
+        .group-container { width: 100%; margin-bottom: 10px; border-bottom: 1px solid #111; }
+        
+        .group-header {
+            width: 100%; background: #111; padding: 15px; 
+            border-radius: 8px; color: #bbbbbb; font-weight: bold;
+            text-align: center; cursor: pointer; display: flex; 
+            justify-content: center; align-items: center;
+            box-sizing: border-box; position: relative;
+        }
+
+        .group-header::after { content: '▼'; font-size: 12px; color: #444; position: absolute; left: 15px; }
+        .group-header.open::after { content: '▲'; }
+
+        .ep-list { 
+            display: none; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 10px 0;
+        }
+
+        .ep-list.show { display: flex; }
+        
+        .ep-item { 
+            display: flex; align-items: center; 
+            background: #050505; margin-bottom: 4px; 
+            width: 100%; border-radius: 5px;
+            justify-content: center;
+        }
+        
+        .ep-name-clickable {
+            flex-grow: 1; padding: 12px;
+            cursor: pointer; -webkit-tap-highlight-color: transparent;
+            text-align: center;
+        }
+
+        .ep-name-text { color: #bbbbbb !important; font-size: 15px; display: block !important; }
+
+        .lib-control-btn { background: transparent; border: none; height: 40px; font-size: 16px; cursor: pointer; padding: 0 10px; }
+        .single-delete-btn { color: #883333; }
+        .single-edit-btn { color: #338833; }
+        .single-move-btn { color: #888833; }
+        
     </style>
 </head>
 <body>
 
-<div class="container">
     <div class="card">
-        <h2>مشغل الفيديو الذكي</h2>
-        
-        <video id="video" controls crossorigin="anonymous"></video>
-
-        <div class="file-input">
-            <label>رابط الفيديو (m3u8 أو mp4):</label>
-            <input type="text" id="videoSource" value="https://limit.fatherlessdad.workers.dev/skyember44.online/file2/~T0EJ5xrqcsmZb5kRxfcXWAMIl8T8tDmE387yaxQUnabmq8wCxHh6NYCAzS0b43IbJyYQa~Fx1pHNsZsTKKVLvu+oibbuRDWi8RctyAo5SW91XIlfpMSPfn4agudyg4MsiRhGmVpCI3GumUtGR72pQgLuwNI8GdW10sFHYrc0F4=/NzIw/aW5kZXgubTN1OA==.m3u8">
-        </div>
-
-        <div class="file-input">
-            <label>اختر ملف الترجمة من الهاتف:</label>
-            <input type="file" id="subFile" accept=".vtt,.srt">
-        </div>
-
-        <button onclick="startPlayer()">تشغيل الفيديو الآن</button>
+        <video id="myPlayer" controls autoplay playsinline>
+            </video>
     </div>
-</div>
 
-<script>
-    function startPlayer() {
-        const video = document.getElementById('video');
-        const source = document.getElementById('videoSource').value;
-        const subInput = document.getElementById('subFile');
-
-        // 1. تشغيل الفيديو (دعم m3u8)
-        if (Hls.isSupported()) {
-            const hls = new Hls();
-            hls.loadSource(source);
-            hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                video.play();
-            });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            // لدعم متصفح Safari على الآيفون
-            video.src = source;
-            video.addEventListener('loadedmetadata', function() {
-                video.play();
-            });
-        }
-
-        // 2. إضافة الترجمة من ملف
-        if (subInput.files.length > 0) {
-            const file = subInput.files[0];
-            const reader = new FileReader();
+    <div id="contentWrapper">
+        <div id="admin">
+            <div id="viewerCount">عدد المتصلين الآن: جاري التحميل...</div>
+            <input type="text" id="urlInput" placeholder="رابط البث المباشر الأساسي..." onpaste="handlePaste(event)">
             
-            reader.onload = function(e) {
-                // مسح التراكات القديمة إن وجدت
-                while (video.firstChild) { video.removeChild(video.firstChild); }
+            <div style="border-top: 1px solid #111; margin-top: 15px; padding-top: 10px;">
+                <input type="text" id="groupNameInput" placeholder="اسم المجموعة الجديدة (مثال: سبيستون)">
+                <button style="background: #2e7d32; color: white; width: 100%; border: none;" onclick="addGroup()">إضافة مجموعة +</button>
+            </div>
+
+            <div style="border-top: 1px solid #111; margin-top: 15px; padding-top: 10px;">
+                <input type="text" id="epNameInput" placeholder="اسم العمل / الحلقة">
+                <input type="text" id="epUrlInput" placeholder="رابط الفيديو المباشر...">
+                <select id="groupSelect"><option value="">بدون مجموعة (الرئيسية)</option></select>
+                <button style="background: #1a3a8a; color: white; width: 100%; border: none; margin-top: 5px;" onclick="addEpisode()">إضافة للمكتبة +</button>
+            </div>
+
+            <div class="btn-group" style="margin-top: 15px; border-top: 1px solid #111; padding-top: 10px;">
+                <input type="file" id="subInput" accept=".srt,.vtt" style="display: none;" onchange="handleSubtitleUpload(event)">
+                <button class="btn-sub" onclick="document.getElementById('subInput').click()">رفع ترجمة 📝</button>
                 
-                const track = document.createElement('track');
-                track.kind = 'subtitles';
-                track.label = 'العربية';
-                track.srclang = 'ar';
-                track.src = URL.createObjectURL(new Blob([e.target.result], {type: 'text/vtt'}));
+                <button id="syncToggleBtn" class="btn-sync" onclick="toggleSync()">جاري التحميل...</button>
+                <button class="btn-delete" onclick="deleteVideo()">حذف فيديو البث 🗑️</button>
+            </div>
+            <div id="statusText">تم التحديث بنجاح ✅</div>
+        </div>
+
+        <div id="librarySection">
+            <div class="lib-title">المكتبة</div> 
+            <div id="episodesContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        var videoElement = document.getElementById('myPlayer');
+        var hls = new Hls();
+        var dbUrl = "";
+        var presenceUrl = "";
+        var lastUrl = ""; 
+        var isAdmin = window.location.hash === "#ana";
+        var isSyncEnabled = true;
+        var myUserId = Math.random().toString(36).substring(7);
+        var openFolders = {};
+
+        // وظيفة معالجة ملف الترجمة من الهاتف
+        function handleSubtitleUpload(event) {
+            var file = event.target.files[0];
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var contents = e.target.result;
+                
+                // تحويل SRT إلى VTT إذا لزم الأمر (المتصفحات تفضل VTT)
+                if (file.name.endsWith('.srt')) {
+                    contents = "WEBVTT\n\n" + contents.replace(/(\d+:\d+:\d+),(\d+)/g, '$1.$2');
+                }
+
+                var blob = new Blob([contents], { type: 'text/vtt' });
+                var url = URL.createObjectURL(blob);
+
+                // إزالة الترجمات القديمة إن وجدت
+                var oldTrack = videoElement.querySelector('track');
+                if (oldTrack) videoElement.removeChild(oldTrack);
+
+                // إضافة ملف الترجمة الجديد
+                var track = document.createElement('track');
+                track.kind = "subtitles";
+                track.label = "العربية";
+                track.srclang = "ar";
+                track.src = url;
                 track.default = true;
-                video.appendChild(track);
+                
+                videoElement.appendChild(track);
+                showStatus("تم تفعيل الترجمة ✅");
             };
             reader.readAsText(file);
         }
-    }
-</script>
 
+        function updatePresence() {}
+
+        function fetchViewerCount() {
+            if (!isAdmin) return;
+            document.getElementById('viewerCount').innerText = "عدد المتصلين الآن: 0";
+        }
+
+        function playMedia(url) {
+            if (!url) { videoElement.src = ""; if (hls) hls.destroy(); lastUrl = ""; return; }
+            if (url === lastUrl) return;
+            lastUrl = url;
+            if (Hls.isSupported() && (url.includes('m3u8') || url.includes('.ts'))) {
+                hls.destroy(); hls = new Hls();
+                hls.loadSource(url); hls.attachMedia(videoElement);
+            } else { videoElement.src = url; }
+            videoElement.play().catch(function(e){});
+        }
+
+        function toggleFolder(header, gid) {
+            header.classList.toggle('open');
+            var list = header.nextElementSibling;
+            list.classList.toggle('show');
+            openFolders[gid] = list.classList.contains('show');
+        }
+
+        function renderLibrary(libData, groupsData) {
+            var container = document.getElementById('episodesContainer');
+            var currentHeaders = container.querySelectorAll('.group-header');
+            currentHeaders.forEach(function(h) {
+                var gid = h.getAttribute('data-gid');
+                if(gid) openFolders[gid] = h.classList.contains('open');
+            });
+
+            container.innerHTML = "";
+            var gSelect = document.getElementById('groupSelect');
+            if(isAdmin && gSelect) {
+                var currentSelection = gSelect.value;
+                gSelect.innerHTML = '<option value="">بدون مجموعة (الرئيسية)</option>';
+                if(groupsData) {
+                    Object.keys(groupsData).forEach(function(gk) {
+                        var opt = document.createElement('option');
+                        opt.value = gk; opt.innerText = groupsData[gk].name;
+                        gSelect.appendChild(opt);
+                    });
+                }
+                gSelect.value = currentSelection;
+            }
+
+            if (!libData) { 
+                container.innerHTML = "<div style='text-align:center; padding:30px; color:#444; display:block !important;'>المكتبة فارغة</div>"; 
+                return; 
+            }
+            
+            var grouped = { "main": [] };
+            if(groupsData) Object.keys(groupsData).forEach(function(k){ grouped[k] = []; });
+
+            Object.keys(libData).forEach(function(key) {
+                var ep = libData[key];
+                var gid = ep.groupId || "main";
+                if(!grouped[gid]) grouped[gid] = [];
+                ep.id = key;
+                grouped[gid].push(ep);
+            });
+
+            Object.keys(grouped).forEach(function(gid) {
+                if (grouped[gid].length === 0 && gid !== "main") return;
+                var groupWrapper = document.createElement('div');
+                groupWrapper.className = "group-container";
+                var header = document.createElement('div');
+                header.className = "group-header";
+                header.setAttribute('data-gid', gid);
+                header.innerText = (gid === "main") ? "📂 القائمة الرئيسية" : "📁 " + (groupsData[gid] ? groupsData[gid].name : "مجموعة");
+                if (openFolders[gid]) header.classList.add('open');
+                header.onclick = function() { toggleFolder(this, gid); };
+                var listDiv = document.createElement('div');
+                listDiv.className = "ep-list";
+                if (openFolders[gid]) listDiv.classList.add('show');
+
+                grouped[gid].forEach(function(ep) {
+                    var item = document.createElement('div');
+                    item.className = "ep-item";
+                    var nameBox = document.createElement('div');
+                    nameBox.className = "ep-name-clickable";
+                    nameBox.innerHTML = '<span class="ep-name-text">' + ep.name + '</span>';
+                    nameBox.onclick = function() { playMedia(ep.url); window.scrollTo({top: 0, behavior: 'smooth'}); };
+
+                    if (isAdmin) {
+                        var delBtn = document.createElement('button');
+                        delBtn.className = "lib-control-btn single-delete-btn";
+                        delBtn.innerHTML = "✕";
+                        delBtn.onclick = function(e) { e.stopPropagation(); deleteSingleEpisode(ep.id); };
+                        var editBtn = document.createElement('button');
+                        editBtn.className = "lib-control-btn single-edit-btn";
+                        editBtn.innerHTML = "✏️";
+                        editBtn.onclick = function(e) { e.stopPropagation(); editSingleEpisode(ep.id, ep.name, ep.url); };
+                        var moveBtn = document.createElement('button');
+                        moveBtn.className = "lib-control-btn single-move-btn";
+                        moveBtn.innerHTML = "📁";
+                        moveBtn.onclick = function(e) { e.stopPropagation(); moveEpisode(ep.id); };
+                        item.appendChild(editBtn);
+                        item.appendChild(moveBtn);
+                        item.appendChild(nameBox);
+                        item.appendChild(delBtn);
+                    } else {
+                        item.appendChild(nameBox);
+                    }
+                    listDiv.appendChild(item);
+                });
+                groupWrapper.appendChild(header);
+                groupWrapper.appendChild(listDiv);
+                container.appendChild(groupWrapper);
+            });
+        }
+
+        function addGroup() { showStatus("بانتظار ربط قاعدة البيانات"); }
+        function moveEpisode(key) { showStatus("بانتظار ربط قاعدة البيانات"); }
+        function editSingleEpisode(key, oldName, oldUrl) { showStatus("بانتظار ربط قاعدة البيانات"); }
+        function deleteSingleEpisode(key) { showStatus("بانتظار ربط قاعدة البيانات"); }
+
+        function syncPlayer(data) {
+            if (!data) return;
+            isSyncEnabled = data.syncEnabled !== false; 
+            updateSyncButtonUI();
+            var lib = document.getElementById('librarySection');
+            if (isAdmin || !isSyncEnabled) {
+                lib.style.display = "block";
+                renderLibrary(data.library, data.groups);
+            } else {
+                lib.style.display = "none";
+            }
+        }
+
+        function loadStream() {}
+        function toggleSync() { if (!isAdmin) return; isSyncEnabled = !isSyncEnabled; updateSyncButtonUI(); }
+
+        function updateSyncButtonUI() {
+            var btn = document.getElementById('syncToggleBtn');
+            if (btn) {
+                btn.innerText = isSyncEnabled ? "المزامنة: مفعلة ✅" : "المزامنة: معطلة ❌";
+                btn.className = isSyncEnabled ? "btn-sync active" : "btn-sync inactive";
+            }
+        }
+
+        function addEpisode() { showStatus("بانتظار ربط قاعدة البيانات"); }
+        function updateDatabaseState() {}
+
+        setInterval(function() {
+            updatePresence();
+            if (isAdmin) { fetchViewerCount(); }
+        }, 5000);
+
+        function handlePaste(event) {
+            setTimeout(function() {
+                var val = document.getElementById('urlInput').value.trim();
+                if (val) {
+                    playMedia(val);
+                    document.getElementById('urlInput').value = ''; 
+                    showStatus("تم التحديث محلياً ✅");
+                }
+            }, 100);
+        }
+
+        function deleteVideo() { if(confirm("حذف البث؟")) playMedia(""); }
+
+        function showStatus(msg) {
+            var status = document.getElementById('statusText');
+            if(status) {
+                status.innerText = msg;
+                status.style.display = "block";
+                setTimeout(function() { status.style.display = "none"; }, 3000);
+            }
+        }
+
+        window.onload = function() {
+            updateSyncButtonUI();
+            if(isAdmin) document.getElementById('admin').style.display = "block";
+        };
+    </script>
 </body>
 </html>
